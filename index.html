@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup 2026 Predictor — how it works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15181F; --ink-2:#4A5160; --ink-3:#8A91A0;
+    --paper:#F4F5F7; --surface:#FFFFFF;
+    --line:rgba(20,24,31,.10); --line-2:rgba(20,24,31,.20);
+    --grass:#0E7C4A; --grass-tint:#E4F3EA;
+    --gold:#C2890C; --gold-tint:#FBF1DC;
+    --sky:#2563EB; --sky-tint:#E7EEFE;
+    --rose:#BE3455;
+    --disp:"Space Grotesk",sans-serif;
+    --body:"Inter",sans-serif;
+    --mono:"Space Mono",monospace;
+    --r:12px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:780px;margin:0 auto;padding:0 24px}
+  a{color:var(--grass)}
+
+  header{padding:72px 0 0}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin:0 0 18px}
+  h1{font-family:var(--disp);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.04;letter-spacing:-.02em;margin:0 0 18px}
+  .lede{font-size:18px;color:var(--ink-2);max-width:58ch;margin:0 0 6px}
+  .source{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin:16px 0 0}
+  .source a{color:var(--ink-2)}
+
+  main{padding:8px 0 90px}
+  section{margin:56px 0 0;scroll-margin-top:20px}
+  h2{font-family:var(--disp);font-weight:700;font-size:27px;letter-spacing:-.02em;margin:0 0 6px;padding-top:36px;border-top:1px solid var(--line-2)}
+  .sub{font-size:14px;color:var(--ink-3);margin:0 0 22px;font-family:var(--mono)}
+  h3{font-family:var(--disp);font-weight:500;font-size:18px;margin:28px 0 8px}
+  p{font-size:15.5px;margin:0 0 14px}
+  code{font-family:var(--mono);font-size:.88em;background:rgba(20,24,31,.06);padding:1px 6px;border-radius:5px}
+  .formula{font-family:var(--mono);font-size:14px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--grass);border-radius:8px;padding:14px 16px;margin:14px 0;overflow-x:auto}
+
+  /* interactive cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin:20px 0}
+  .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:18px}
+  .vs select{width:100%;font-family:var(--body);font-size:15px;font-weight:500;padding:10px 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--ink)}
+  .vs .mid{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
+  .wdl{display:flex;height:38px;border-radius:8px;overflow:hidden;font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;margin:6px 0 4px}
+  .wdl div{display:flex;align-items:center;justify-content:center;transition:flex .3s ease;min-width:0;white-space:nowrap}
+  .wdl .w{background:var(--grass)} .wdl .d{background:var(--ink-3)} .wdl .l{background:var(--sky)}
+  .wdl-key{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+  .xg{text-align:center;font-family:var(--mono);font-size:14px;color:var(--ink-2);margin:14px 0 0}
+  .xg b{color:var(--ink);font-size:17px}
+  .scores{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 0}
+  .chip{font-family:var(--mono);font-size:12px;background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:4px 11px;color:var(--ink-2)}
+
+  .knob{margin:18px 0 0}
+  .knob label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--ink-2);margin-bottom:6px}
+  .knob label b{color:var(--ink)}
+  input[type=range]{width:100%;accent-color:var(--grass)}
+  .knob .hint{font-size:12px;color:var(--ink-3);margin:4px 0 0}
+
+  /* bar charts */
+  .bars{margin:18px 0 0}
+  .bar{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:13.5px}
+  .bar .nm{width:120px;text-align:right;color:var(--ink-2)}
+  .bar .track{flex:1;background:var(--paper);border-radius:5px;height:22px;border:1px solid var(--line)}
+  .bar .fill{height:100%;border-radius:4px;background:var(--grass);min-width:2px}
+  .bar .val{width:50px;font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+  .bar.host .fill{background:var(--gold)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+  td.k{font-family:var(--mono);color:var(--grass)}
+  .callout{background:var(--gold-tint);border-left:4px solid var(--gold);border-radius:8px;padding:14px 16px;margin:16px 0;font-size:14.5px}
+  ol,ul{font-size:15.5px;padding-left:22px}
+  li{margin:5px 0}
+  footer{border-top:1px solid var(--line-2);margin-top:60px;padding:28px 0 60px;font-family:var(--mono);font-size:12.5px;color:var(--ink-3)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--grass-tint);color:var(--grass);padding:3px 9px;border-radius:20px;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">⚽ Monte Carlo · Elo + Poisson</p>
+  <h1>How to predict the<br>2026 World Cup</h1>
+  <p class="lede">A small, transparent model that turns team strength into match odds, then plays the whole 48-team tournament 20,000 times to find each team's chance of lifting the trophy. Every assumption is a knob you can turn.</p>
+  <p class="source">Ratings: eloratings.net / Wikipedia, 2026-06-24 · Code: <a href="https://github.com/fernfant/wc2026-predictor" target="_blank" rel="noopener">github.com/fernfant/wc2026-predictor</a></p>
+</header>
+
+<main>
+
+<section id="try">
+  <h2>1 · Try it: any match, live</h2>
+  <p class="sub">pick two teams — the bars are computed in your browser</p>
+  <p>The whole model rests on one idea: the <strong>gap</strong> between two teams' ratings decides how many goals each is likely to score. Pick a matchup and watch the odds. This is the exact same math the Python runs, reproduced here in JavaScript.</p>
+  <div class="card">
+    <div class="vs">
+      <select id="teamA"></select>
+      <span class="mid">vs</span>
+      <select id="teamB"></select>
+    </div>
+    <div class="wdl" id="wdl"></div>
+    <div class="wdl-key"><span id="kw"></span><span id="kd"></span><span id="kl"></span></div>
+    <div class="xg" id="xg"></div>
+    <div class="scores" id="scores"></div>
+    <div class="knob">
+      <label>Host home advantage <b><span id="haVal">80</span> Elo</b></label>
+      <input type="range" id="ha" min="0" max="180" value="80" step="10">
+      <p class="hint">Boost applied to the three hosts (🇺🇸🇨🇦🇲🇽). If one is playing, watch their bar grow.</p>
+    </div>
+    <div class="knob">
+      <label>Goal sensitivity β <b><span id="betaVal">0.45</span></b></label>
+      <input type="range" id="beta" min="0.15" max="0.75" value="0.45" step="0.05">
+      <p class="hint">How hard a rating gap bends the goals. Low β → flatter, more upsets. High β → favourites dominate.</p>
+    </div>
+  </div>
+</section>
+
+<section id="model">
+  <h2>2 · The model, in three steps</h2>
+  <p class="sub">strength → goals → scoreline</p>
+
+  <h3>Step 1 — Strength is an Elo number</h3>
+  <p>Every team starts with a single number from the <a href="https://www.eloratings.net" target="_blank" rel="noopener">World Football Elo</a> system — Argentina 2144, Spain 2134, … Haiti 1517. Then two knobs adjust it into an <em>effective</em> rating:</p>
+  <div class="formula">eff = elo + (host ? home_adv : concacaf_bonus) + form_weight × form</div>
+  <p>That's the home-advantage and recent-form levers — the two things a rating alone misses.</p>
+
+  <h3>Step 2 — The gap becomes expected goals</h3>
+  <p>The rating gap feeds a log-linear model. An even match means each side expects <code>avg_goals</code> (≈1.30); the stronger team's expectation grows exponentially with the gap:</p>
+  <div class="formula">Δ = (eff_A − eff_B) / 400<br>λ_A = 1.30 × e^(β·Δ)      λ_B = 1.30 × e^(−β·Δ)</div>
+
+  <h3>Step 3 — Goals become a scoreline</h3>
+  <p>Goals arrive at random, so we draw each team's goals from a <strong>Poisson</strong> distribution around its λ. That gives a concrete scoreline — and therefore a win, draw, or loss, plus the goals-for/against that decide group tiebreakers. Run it once for a result; run it 20,000 times for probabilities.</p>
+  <div class="formula">P(k goals) = e^(−λ) · λ^k / k!</div>
+  <div class="callout">Why hybrid? <strong>Elo</strong> is great at ranking strength but says nothing about scorelines. <strong>Poisson</strong> turns strength into goals — which you need for group standings (GD, GF) and for the drama of a 2–1. Together they give both odds and scores.</div>
+</section>
+
+<section id="principles">
+  <h2>3 · The principles you can tune</h2>
+  <p class="sub">principles.py — every belief about football lives here</p>
+  <p>Nothing in the model is hard-coded except these. Change one, re-run, and the whole forecast shifts. That's the point — it's a sensitivity instrument, not a black box.</p>
+  <table>
+    <tr><th>knob</th><th>controls</th><th>default</th></tr>
+    <tr><td class="k">home_advantage_elo</td><td>host boost (USA/Canada/Mexico)</td><td>80</td></tr>
+    <tr><td class="k">concacaf_region_elo</td><td>smaller boost for other CONCACAF teams</td><td>15</td></tr>
+    <tr><td class="k">form_weight</td><td>multiplier on each team's form column</td><td>1.0</td></tr>
+    <tr><td class="k">goal_elo_beta</td><td>predictability vs upsets</td><td>0.45</td></tr>
+    <tr><td class="k">elo_scale</td><td>parity vs amplified favourites</td><td>400</td></tr>
+    <tr><td class="k">avg_goals_per_team</td><td>overall scoring environment</td><td>1.30</td></tr>
+    <tr><td class="k">penalty_skill</td><td>how much shootouts favour the better team</td><td>0.30</td></tr>
+  </table>
+</section>
+
+<section id="tournament">
+  <h2>4 · Playing the whole tournament</h2>
+  <p class="sub">12 groups → best thirds → knockout → champion</p>
+  <p>One simulation of the cup:</p>
+  <ol>
+    <li><strong>Groups</strong> — 12 groups of 4, round-robin. Rank by points → goal difference → goals scored.</li>
+    <li><strong>Qualify</strong> — top 2 of each group, plus the 8 best third-placed teams → 32 teams.</li>
+    <li><strong>Knockout</strong> — the official FIFA round-of-32 bracket (with the third-place allocation table) runs through to the final. Level games go to a skill-weighted shootout.</li>
+    <li><strong>Repeat</strong> — do all of that 20,000 times and count how often each team reaches each round.</li>
+  </ol>
+  <p>Here's the baseline title race (defaults, 20,000 sims). Hosts in gold:</p>
+  <div class="bars" id="titleBars"></div>
+</section>
+
+<section id="sensitivity">
+  <h2>5 · Sensitivity: the payoff</h2>
+  <p class="sub">sensitivity.py — sweep a knob, watch the odds move</p>
+  <p>This is what the principles are <em>for</em>. Take home advantage from 0 to 160 Elo and the hosts swing hard while everyone else barely moves — exactly what you'd expect, and a sanity check that the model behaves:</p>
+  <table>
+    <tr><th>team</th><th>0</th><th>80</th><th>160</th><th>swing</th></tr>
+    <tr><td>🇲🇽 Mexico</td><td>2.9%</td><td>5.1%</td><td>8.5%</td><td class="k">+5.5</td></tr>
+    <tr><td>🇺🇸 United States</td><td>1.0%</td><td>2.6%</td><td>4.3%</td><td class="k">+3.3</td></tr>
+    <tr><td>🇫🇷 France</td><td>10.7%</td><td>9.0%</td><td>9.5%</td><td class="k">−1.2</td></tr>
+    <tr><td>🇦🇷 Argentina</td><td>13.7%</td><td>13.0%</td><td>12.5%</td><td class="k">−1.2</td></tr>
+  </table>
+  <div class="formula">$ python3 sensitivity.py home_advantage_elo 0 40 80 120 160</div>
+  <p>Run the same sweep on <code>goal_elo_beta</code> to see the whole field compress toward parity, or on <code>form_weight</code> after you fill in who's hot.</p>
+</section>
+
+<section id="run">
+  <h2>6 · Run it yourself</h2>
+  <p class="sub">pure Python stdlib · no dependencies · ~2.5s for 20k sims</p>
+  <div class="formula">git clone https://github.com/fernfant/wc2026-predictor<br>cd wc2026-predictor<br><br>python3 predict.py              <span style="color:var(--ink-3)"># title race</span><br>python3 predict.py --matches    <span style="color:var(--ink-3)"># every group match's odds</span><br>python3 predict.py --group H    <span style="color:var(--ink-3)"># one group in detail</span><br>python3 predict.py --full       <span style="color:var(--ink-3)"># stage-by-stage, all 48</span><br><br>python3 sensitivity.py home_advantage_elo 0 80 160</div>
+  <p>Edit team ratings or the <code>form</code> column in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/data/teams.csv" target="_blank" rel="noopener">data/teams.csv</a>, tune the knobs in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/principles.py" target="_blank" rel="noopener">principles.py</a>, and the forecast follows.</p>
+  <p><span class="pill">note</span> The model predicts from the <em>pre-tournament</em> state. To re-forecast mid-event, prune the CSV to surviving teams.</p>
+</section>
+
+</main>
+
+<footer>
+  Built as a teaching companion to the wc2026-predictor.
+  Elo ratings via eloratings.net &amp; Wikipedia (2026-06-24). Not betting advice — it's a model, and all models are wrong.
+</footer>
+
+</div>
+
+<script>
+const TEAMS = [
+  ["Argentina","CONMEBOL",2144,0,"🇦🇷"],["Spain","UEFA",2134,0,"🇪🇸"],["France","UEFA",2090,0,"🇫🇷"],
+  ["England","UEFA",2028,0,"🏴"],["Brazil","CONMEBOL",2009,0,"🇧🇷"],["Colombia","CONMEBOL",2006,0,"🇨🇴"],
+  ["Portugal","UEFA",1988,0,"🇵🇹"],["Netherlands","UEFA",1972,0,"🇳🇱"],["Germany","UEFA",1954,0,"🇩🇪"],
+  ["Norway","UEFA",1951,0,"🇳🇴"],["Japan","AFC",1925,0,"🇯🇵"],["Switzerland","UEFA",1914,0,"🇨🇭"],
+  ["Mexico","CONCACAF",1912,1,"🇲🇽"],["Croatia","UEFA",1896,0,"🇭🇷"],["Morocco","CAF",1877,0,"🇲🇦"],
+  ["Ecuador","CONMEBOL",1864,0,"🇪🇨"],["Uruguay","CONMEBOL",1851,0,"🇺🇾"],["Austria","UEFA",1841,0,"🇦🇹"],
+  ["United States","CONCACAF",1820,1,"🇺🇸"],["Senegal","CAF",1817,0,"🇸🇳"],["Paraguay","CONMEBOL",1816,0,"🇵🇾"],
+  ["Turkey","UEFA",1813,0,"🇹🇷"],["Australia","AFC",1799,0,"🇦🇺"],["Algeria","CAF",1780,0,"🇩🇿"],
+  ["Iran","AFC",1766,0,"🇮🇷"],["Canada","CONCACAF",1748,1,"🇨🇦"],["Scotland","UEFA",1745,0,"🏴"],
+  ["Egypt","CAF",1740,0,"🇪🇬"],["Ivory Coast","CAF",1728,0,"🇨🇮"],["Sweden","UEFA",1727,0,"🇸🇪"],
+  ["South Korea","AFC",1723,0,"🇰🇷"],["Czechia","UEFA",1680,0,"🇨🇿"],["Uzbekistan","AFC",1677,0,"🇺🇿"],
+  ["Panama","CONCACAF",1668,0,"🇵🇦"],["DR Congo","CAF",1666,0,"🇨🇩"],["Jordan","AFC",1632,0,"🇯🇴"],
+  ["Cape Verde","CAF",1625,0,"🇨🇻"],["Bosnia and Herzegovina","UEFA",1622,0,"🇧🇦"],["Saudi Arabia","AFC",1593,0,"🇸🇦"],
+  ["Iraq","AFC",1586,0,"🇮🇶"],["Ghana","CAF",1584,0,"🇬🇭"],["South Africa","CAF",1575,0,"🇿🇦"],
+  ["Tunisia","CAF",1570,0,"🇹🇳"],["New Zealand","OFC",1549,0,"🇳🇿"],["Haiti","CONCACAF",1517,0,"🇭🇹"],
+  ["Curacao","CONCACAF",1453,0,"🇨🇼"],["Qatar","AFC",1411,0,"🇶🇦"]
+];
+const P = {scale:400, mu:1.30, beta:0.45, homeAdv:80, region:15, formW:1.0};
+
+function eff(t){
+  let e = t[2];
+  if (t[3]===1) e += P.homeAdv;
+  else if (t[1]==="CONCACAF") e += P.region;
+  e += P.formW * t[4];
+  return e;
+}
+function lambdas(a,b){
+  const d = (eff(a)-eff(b))/P.scale;
+  return [P.mu*Math.exp(P.beta*d), P.mu*Math.exp(-P.beta*d)];
+}
+function pois(lam,k){ return Math.exp(-lam)*Math.pow(lam,k)/factorial(k); }
+const _f=[1]; function factorial(n){ while(_f.length<=n) _f.push(_f[_f.length-1]*_f.length); return _f[n]; }
+function probs(a,b){
+  const [la,lb]=lambdas(a,b); let w=0,dr=0,l=0; const cells=[];
+  for(let i=0;i<10;i++)for(let j=0;j<10;j++){
+    const p=pois(la,i)*pois(lb,j);
+    if(i>j)w+=p; else if(j>i)l+=p; else dr+=p;
+    cells.push([i,j,p]);
+  }
+  cells.sort((x,y)=>y[2]-x[2]);
+  return {w,dr,l,la,lb,top:cells.slice(0,4)};
+}
+
+const A=document.getElementById('teamA'), B=document.getElementById('teamB');
+TEAMS.forEach((t,i)=>{
+  A.add(new Option(t[4]+" "+t[0], i));
+  B.add(new Option(t[4]+" "+t[0], i));
+});
+A.value=12; B.value=18; // Mexico vs USA — both hosts, fun default
+
+function render(){
+  const a=TEAMS[+A.value], b=TEAMS[+B.value];
+  const r=probs(a,b);
+  const wdl=document.getElementById('wdl');
+  const pc=x=>(100*x).toFixed(0);
+  wdl.innerHTML=`<div class="w" style="flex:${r.w}">${r.w>0.07?pc(r.w)+'%':''}</div>`+
+                `<div class="d" style="flex:${r.dr}">${r.dr>0.07?pc(r.dr)+'%':''}</div>`+
+                `<div class="l" style="flex:${r.l}">${r.l>0.07?pc(r.l)+'%':''}</div>`;
+  document.getElementById('kw').textContent=`${a[4]} win ${pc(r.w)}%`;
+  document.getElementById('kd').textContent=`draw ${pc(r.dr)}%`;
+  document.getElementById('kl').textContent=`${b[4]} win ${pc(r.l)}%`;
+  document.getElementById('xg').innerHTML=`expected goals &nbsp; <b>${r.la.toFixed(2)}</b> – <b>${r.lb.toFixed(2)}</b>`;
+  document.getElementById('scores').innerHTML=r.top.map(c=>
+    `<span class="chip">${c[0]}–${c[1]} · ${pc(c[2])}%</span>`).join('');
+}
+[A,B].forEach(s=>s.addEventListener('change',render));
+const ha=document.getElementById('ha'), beta=document.getElementById('beta');
+ha.addEventListener('input',()=>{P.homeAdv=+ha.value;document.getElementById('haVal').textContent=ha.value;render();});
+beta.addEventListener('input',()=>{P.beta=+beta.value;document.getElementById('betaVal').textContent=(+beta.value).toFixed(2);render();});
+render();
+
+// baseline title odds (from python, 20k sims, defaults)
+const TITLE=[["Argentina",13.2,0],["Spain",13.0,0],["France",9.6,0],["England",6.0,0],["Brazil",5.7,0],
+["Mexico",5.1,1],["Colombia",5.0,0],["Portugal",4.5,0],["Netherlands",3.9,0],["Germany",3.9,0],
+["Norway",3.2,0],["Japan",2.8,0],["Switzerland",2.8,0],["United States",2.4,1],["Croatia",2.0,0]];
+const flag=n=>{const t=TEAMS.find(x=>x[0]===n);return t?t[4]:'';};
+document.getElementById('titleBars').innerHTML=TITLE.map(t=>{
+  const w=(t[1]/13.2*100);
+  return `<div class="bar${t[2]?' host':''}"><span class="nm">${flag(t[0])} ${t[0]}</span>`+
+    `<span class="track"><span class="fill" style="width:${w}%"></span></span>`+
+    `<span class="val">${t[1].toFixed(1)}%</span></div>`;
+}).join('');
+</script>
+</body>
+</html>
