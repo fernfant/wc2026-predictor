@@ -113,6 +113,42 @@ def simulate_once(teams, P, rng):
     return winners, runners, reached, champ.name
 
 
+# Actual round-of-32 field (reconstructed from real group results + FIFA
+# third-place allocation), in bracket order M73..M88.
+ACTUAL_R32 = [
+    ("South Africa", "Canada"), ("Germany", "Paraguay"),
+    ("Netherlands", "Morocco"), ("Brazil", "Japan"),
+    ("France", "Sweden"), ("Ivory Coast", "Norway"),
+    ("Mexico", "Ecuador"), ("England", "DR Congo"),
+    ("United States", "Bosnia and Herzegovina"), ("Belgium", "Senegal"),
+    ("Portugal", "Croatia"), ("Spain", "Austria"),
+    ("Switzerland", "Algeria"), ("Argentina", "Cape Verde"),
+    ("Colombia", "Ghana"), ("Australia", "Egypt"),
+]
+
+
+def run_from_r32(teams, P, field=ACTUAL_R32):
+    """Monte Carlo the knockout from a fixed R32 field; title odds among the 32."""
+    rng = random.Random(P["random_seed"])
+    n = P["n_sims"]
+    stages = ("r16", "qf", "sf", "final", "champion")
+    pairs = [(teams[a], teams[b]) for a, b in field]
+    tally = {t.name: defaultdict(int) for p in pairs for t in p}
+    for _ in range(n):
+        bracket = [sim_knockout(a, b, P, rng) for a, b in pairs]
+        for w in bracket:
+            tally[w.name]["r16"] += 1
+        for stage in ("qf", "sf", "final"):
+            nxt = []
+            for i in range(0, len(bracket), 2):
+                w = sim_knockout(bracket[i], bracket[i + 1], P, rng)
+                tally[w.name][stage] += 1
+                nxt.append(w)
+            bracket = nxt
+        tally[sim_knockout(bracket[0], bracket[1], P, rng).name]["champion"] += 1
+    return {nm: {s: tally[nm][s] / n for s in stages} for nm in tally}
+
+
 def run(teams, P):
     rng = random.Random(P["random_seed"])
     n = P["n_sims"]

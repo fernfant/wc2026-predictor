@@ -186,10 +186,31 @@
   <p>Run the same sweep on <code>goal_elo_beta</code> to see the whole field compress toward parity, or on <code>form_weight</code> after you fill in who's hot.</p>
 </section>
 
+<section id="retrofit">
+  <h2>6 · Fine-tuning on the real group stage</h2>
+  <p class="sub">calibrate.py — fit the principles to what actually happened</p>
+  <p>The group stage is over: 72 matches, 215 goals, <strong>2.99 per game</strong>. That's a fresh batch of evidence — so we can <em>retrofit</em> the model. Holding the pre-tournament Elo ratings fixed, we search for the principle values that best reproduce every team's actual goals-for, goals-against and points across its three games (minimising squared error).</p>
+  <p>The real group stage was <strong>more lopsided</strong> than the defaults expected — France 10–2, Germany &amp; Netherlands 10–4, Argentina 8–1, Mexico 6–0. So the fit pushes goal-sensitivity up and widens the host edge:</p>
+  <table>
+    <tr><th>knob</th><th>default</th><th>fitted to results</th><th>effect</th></tr>
+    <tr><td class="k">goal_elo_beta</td><td>0.45</td><td><b>0.80</b></td><td>favourites win bigger</td></tr>
+    <tr><td class="k">home_advantage_elo</td><td>80</td><td><b>120</b></td><td>hosts overperformed</td></tr>
+    <tr><td class="k">avg_goals_per_team</td><td>1.30</td><td>1.30</td><td>unchanged</td></tr>
+  </table>
+  <div class="callout">Fit error drops <strong>22.5%</strong>, and modelled scoring moves from 2.73 → <strong>3.03 goals/match</strong>, right onto the real 2.99. Higher β does most of the work: it lifts scoring <em>and</em> sharpens the favourites at once.</div>
+  <p>Now re-forecast the rest of the cup from the <strong>32 teams that actually qualified</strong>, with the calibrated knobs. Uruguay, Senegal-as-favourite and other names are gone; the survivors' paths are fixed by the real bracket. The sharper model concentrates the odds at the top:</p>
+  <div style="text-align:center;margin:0 0 4px">
+    <button id="toggle" style="font-family:var(--mono);font-size:13px;padding:8px 16px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);cursor:pointer">▶ showing: <b id="tlabel">retrofit (actual R32 + calibrated)</b> — click to compare</button>
+  </div>
+  <div class="bars" id="retroBars"></div>
+  <div class="formula">$ python3 calibrate.py --write          <span style="color:var(--ink-3)"># fit knobs to group results</span><br>$ python3 predict.py --actual --calibrated   <span style="color:var(--ink-3)"># re-forecast from the real R32</span></div>
+  <p><span class="pill">caveat</span> Fitting three numbers to one group stage is a small sample — a few blowouts pull β upward, which is partly real (these are strong teams) and partly luck. That tension is exactly what the knobs let you probe: nudge β back toward 0.6 and see how much of Argentina's jump survives.</p>
+</section>
+
 <section id="run">
-  <h2>6 · Run it yourself</h2>
+  <h2>7 · Run it yourself</h2>
   <p class="sub">pure Python stdlib · no dependencies · ~2.5s for 20k sims</p>
-  <div class="formula">git clone https://github.com/fernfant/wc2026-predictor<br>cd wc2026-predictor<br><br>python3 predict.py              <span style="color:var(--ink-3)"># title race</span><br>python3 predict.py --matches    <span style="color:var(--ink-3)"># every group match's odds</span><br>python3 predict.py --group H    <span style="color:var(--ink-3)"># one group in detail</span><br>python3 predict.py --full       <span style="color:var(--ink-3)"># stage-by-stage, all 48</span><br><br>python3 sensitivity.py home_advantage_elo 0 80 160</div>
+  <div class="formula">git clone https://github.com/fernfant/wc2026-predictor<br>cd wc2026-predictor<br><br>python3 predict.py              <span style="color:var(--ink-3)"># pre-tournament title race</span><br>python3 predict.py --matches    <span style="color:var(--ink-3)"># every group match's odds</span><br>python3 predict.py --full       <span style="color:var(--ink-3)"># stage-by-stage, all 48</span><br><br>python3 calibrate.py --write    <span style="color:var(--ink-3)"># fit knobs to actual group results</span><br>python3 predict.py --actual --calibrated  <span style="color:var(--ink-3)"># retrofit forecast from real R32</span><br><br>python3 sensitivity.py home_advantage_elo 0 80 160</div>
   <p>Edit team ratings or the <code>form</code> column in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/data/teams.csv" target="_blank" rel="noopener">data/teams.csv</a>, tune the knobs in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/principles.py" target="_blank" rel="noopener">principles.py</a>, and the forecast follows.</p>
   <p><span class="pill">note</span> The model predicts from the <em>pre-tournament</em> state. To re-forecast mid-event, prune the CSV to surviving teams.</p>
 </section>
@@ -281,12 +302,28 @@ const TITLE=[["Argentina",13.2,0],["Spain",13.0,0],["France",9.6,0],["England",6
 ["Mexico",5.1,1],["Colombia",5.0,0],["Portugal",4.5,0],["Netherlands",3.9,0],["Germany",3.9,0],
 ["Norway",3.2,0],["Japan",2.8,0],["Switzerland",2.8,0],["United States",2.4,1],["Croatia",2.0,0]];
 const flag=n=>{const t=TEAMS.find(x=>x[0]===n);return t?t[4]:'';};
-document.getElementById('titleBars').innerHTML=TITLE.map(t=>{
-  const w=(t[1]/13.2*100);
-  return `<div class="bar${t[2]?' host':''}"><span class="nm">${flag(t[0])} ${t[0]}</span>`+
-    `<span class="track"><span class="fill" style="width:${w}%"></span></span>`+
-    `<span class="val">${t[1].toFixed(1)}%</span></div>`;
-}).join('');
+function drawBars(el,data,max){
+  el.innerHTML=data.map(t=>{
+    const w=(t[1]/max*100);
+    return `<div class="bar${t[2]?' host':''}"><span class="nm">${flag(t[0])} ${t[0]}</span>`+
+      `<span class="track"><span class="fill" style="width:${w}%"></span></span>`+
+      `<span class="val">${t[1].toFixed(1)}%</span></div>`;
+  }).join('');
+}
+drawBars(document.getElementById('titleBars'),TITLE,13.2);
+
+// retrofit: actual R32 field + params calibrated to the group stage (20k sims)
+const RETRO=[["Argentina",25.3,0],["Spain",18.2,0],["France",13.7,0],["Colombia",6.6,0],
+["England",6.5,0],["Mexico",5.4,1],["Brazil",4.5,0],["Germany",2.9,0],["Netherlands",2.9,0],
+["Portugal",2.7,0],["United States",2.6,1],["Norway",2.2,0],["Japan",1.1,0],["Canada",1.1,1],["Switzerland",1.1,0]];
+const retroEl=document.getElementById('retroBars');
+let showRetro=true;
+function paint(){
+  if(showRetro){ drawBars(retroEl,RETRO,25.3); document.getElementById('tlabel').textContent="retrofit (actual R32 + calibrated)"; }
+  else { drawBars(retroEl,TITLE,13.2); document.getElementById('tlabel').textContent="pre-tournament (original model)"; }
+}
+document.getElementById('toggle').addEventListener('click',()=>{showRetro=!showRetro;paint();});
+paint();
 </script>
 </body>
 </html>

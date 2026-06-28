@@ -16,6 +16,9 @@ python3 predict.py --full          # stage-by-stage table (qualify→R16→QF→
 python3 sensitivity.py home_advantage_elo 0 40 80 120 160
 python3 sensitivity.py goal_elo_beta 0.25 0.35 0.45 0.55
 python3 sensitivity.py --teams Mexico,United States home_advantage_elo 0 80 160
+
+python3 calibrate.py --write              # fit knobs to actual group results
+python3 predict.py --actual --calibrated  # retrofit forecast from the real R32
 ```
 
 Pure Python stdlib — no dependencies. ~2.5s for 20,000 sims.
@@ -53,6 +56,21 @@ All live in [`principles.py`](principles.py), each documented inline:
 `form` column (Elo points: `+30` hot, `-30` cold) and set `form_weight` > 0 to
 make it bite. Form is `0` for everyone by default, so that knob is inert until
 you supply opinions.
+
+## Fine-tuning on actual results
+
+Once the group stage is played, `calibrate.py` retrofits the model to it. Holding
+the pre-tournament Elo fixed, it grid-searches `avg_goals_per_team`,
+`goal_elo_beta` and `home_advantage_elo` to minimise squared error between each
+team's **expected** (goals-for, goals-against, points) over its three real
+fixtures and the **observed** values in [`data/group_results.csv`](data/group_results.csv).
+
+Fitting to the real 2026 group stage (215 goals, 2.99/match — blowout-heavy)
+pushes `goal_elo_beta` 0.45 → 0.80 and `home_advantage_elo` 80 → 120 (fit error
+−22.5%). `--write` saves these to `principles_calibrated.py`; `predict.py --actual`
+then forecasts the knockout from the 32 teams that actually qualified
+(`ACTUAL_R32` in `tournament.py`). The sharper model concentrates title odds at
+the top — e.g. Argentina 16% → 25% on the same field.
 
 ## Caveats
 

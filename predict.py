@@ -14,9 +14,9 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
-from engine import match_probs                       # noqa: E402
-from tournament import load_teams, run, GROUPS        # noqa: E402
-from principles import PRINCIPLES as P                # noqa: E402
+from engine import match_probs                                      # noqa: E402
+from tournament import load_teams, run, run_from_r32, ACTUAL_R32, GROUPS  # noqa: E402
+from principles import PRINCIPLES as P                              # noqa: E402
 
 DATA = Path(__file__).parent / "data" / "teams.csv"
 
@@ -72,13 +72,33 @@ def show_title(res, teams, full=False):
     print(f"\nMost likely champion: {fav.name} ({pct(res[fav.name]['champion'])})")
 
 
+def show_actual(res):
+    rows = sorted(res, key=lambda n: res[n]["champion"], reverse=True)
+    print(f"\n=== Title odds from the ACTUAL round of 32 ({P['n_sims']:,} sims) ===")
+    print(f"{'#':>3}  {'team':>22}    QF     SF    final   CHAMP")
+    for i, n in enumerate(rows, 1):
+        r = res[n]
+        print(f"{i:>3}  {n:>22}  {pct(r['qf'])} {pct(r['sf'])} {pct(r['final'])} {pct(r['champion'])}")
+    print(f"\nMost likely champion: {rows[0]} ({pct(res[rows[0]]['champion'])})")
+
+
 def main():
+    global P
     ap = argparse.ArgumentParser()
     ap.add_argument("--matches", action="store_true", help="group-stage match odds")
     ap.add_argument("--group", help="restrict to one group letter")
     ap.add_argument("--full", action="store_true", help="full stage table, all 48")
+    ap.add_argument("--calibrated", action="store_true", help="use principles_calibrated.py")
+    ap.add_argument("--actual", action="store_true", help="forecast from the actual R32 field")
     args = ap.parse_args()
+    if args.calibrated:
+        from principles_calibrated import PRINCIPLES as CP  # noqa
+        P = CP
     teams = load_teams(DATA)
+
+    if args.actual:
+        show_actual(run_from_r32(teams, P))
+        return
 
     if args.matches or args.group:
         show_matches(teams, only=args.group)
