@@ -231,7 +231,7 @@ const TEAMS = [
   ["Portugal","UEFA",1988,0,"🇵🇹"],["Netherlands","UEFA",1972,0,"🇳🇱"],["Germany","UEFA",1954,0,"🇩🇪"],
   ["Norway","UEFA",1951,0,"🇳🇴"],["Japan","AFC",1925,0,"🇯🇵"],["Switzerland","UEFA",1914,0,"🇨🇭"],
   ["Mexico","CONCACAF",1912,1,"🇲🇽"],["Croatia","UEFA",1896,0,"🇭🇷"],["Morocco","CAF",1877,0,"🇲🇦"],
-  ["Ecuador","CONMEBOL",1864,0,"🇪🇨"],["Uruguay","CONMEBOL",1851,0,"🇺🇾"],["Austria","UEFA",1841,0,"🇦🇹"],
+  ["Belgium","UEFA",1869,0,"🇧🇪"],["Ecuador","CONMEBOL",1864,0,"🇪🇨"],["Uruguay","CONMEBOL",1851,0,"🇺🇾"],["Austria","UEFA",1841,0,"🇦🇹"],
   ["United States","CONCACAF",1820,1,"🇺🇸"],["Senegal","CAF",1817,0,"🇸🇳"],["Paraguay","CONMEBOL",1816,0,"🇵🇾"],
   ["Turkey","UEFA",1813,0,"🇹🇷"],["Australia","AFC",1799,0,"🇦🇺"],["Algeria","CAF",1780,0,"🇩🇿"],
   ["Iran","AFC",1766,0,"🇮🇷"],["Canada","CONCACAF",1748,1,"🇨🇦"],["Scotland","UEFA",1745,0,"🏴"],
@@ -269,11 +269,13 @@ function probs(a,b){
 }
 
 const A=document.getElementById('teamA'), B=document.getElementById('teamB');
-TEAMS.forEach((t,i)=>{
-  A.add(new Option(t[4]+" "+t[0], i));
-  B.add(new Option(t[4]+" "+t[0], i));
+const order=TEAMS.map((t,i)=>i).sort((x,y)=>TEAMS[x][0].localeCompare(TEAMS[y][0]));
+order.forEach(i=>{
+  A.add(new Option(TEAMS[i][4]+" "+TEAMS[i][0], i));
+  B.add(new Option(TEAMS[i][4]+" "+TEAMS[i][0], i));
 });
-A.value=12; B.value=18; // Mexico vs USA — both hosts, fun default
+const idx=n=>TEAMS.findIndex(t=>t[0]===n);
+A.value=idx("Mexico"); B.value=idx("United States"); // both hosts, fun default
 
 function render(){
   const a=TEAMS[+A.value], b=TEAMS[+B.value];
