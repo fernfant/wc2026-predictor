@@ -48,6 +48,21 @@ PRINCIPLES = {
     # in. That's deliberate — set the numbers you believe, then sweep this weight.
     "form_weight": 1.0,
 
+    # --- KNOB 3: FATIGUE (age + squad depth) ---
+    # Teams tire as the tournament drags on. The penalty grows each round, is
+    # amplified by an OLD squad and softened by a DEEP one (more rotation). It's
+    # applied as an Elo penalty per team, so it CANCELS between similar squads and
+    # only swings a match when an old/thin team meets a young/deep one late on.
+    #   penalty = fatigue_per_match_elo × matches_played × age_mult × depth_mult
+    # Drives off each squad's average age + depth rating in data/teams.csv, so the
+    # individual players (their ages) and bench strength feed straight in.
+    # Set fatigue_per_match_elo = 0 to switch fatigue off entirely.
+    "fatigue_per_match_elo": 7.0,    # Elo lost per cumulative match, at baseline age/depth
+    "fatigue_age_baseline": 27.5,    # tournament-average age; older squads pay more
+    "fatigue_age_sensitivity": 0.10, # +10% fatigue per year above the baseline age
+    "fatigue_depth_baseline": 3.0,   # average depth rating (1=very thin … 5=two strong XIs)
+    "fatigue_depth_relief": 0.15,    # −15% fatigue per depth point above baseline
+
     # --- Knockout penalty shootouts ---
     # If a knockout match is level after a simulated 90 mins, the winner is decided
     # here. 0.0 = pure coin flip. 1.0 = the better team wins as often as their Elo

@@ -30,7 +30,8 @@ def load_teams(path):
     teams = {}
     with open(path, newline="") as f:
         for r in csv.DictReader(f):
-            t = Team(r["team"], r["group"], r["confed"], r["elo"], r["form"], r["host"])
+            t = Team(r["team"], r["group"], r["confed"], r["elo"], r["form"], r["host"],
+                     r.get("avg_age", 27.5), r.get("depth", 3.0))
             teams[t.name] = t
     return teams
 
@@ -96,19 +97,18 @@ def simulate_once(teams, P, rng):
             return third_by_group[slot_group[slot[2:]]]
         return winners[slot[1]] if kind == "1" else runners[slot[1]]
 
-    # Round of 32
-    bracket = [sim_knockout(resolve(a), resolve(b), P, rng) for a, b in R32]
+    # Round of 32 (3 group games already played), then 4/5/6/7 matches deep.
+    bracket = [sim_knockout(resolve(a), resolve(b), P, rng, 3) for a, b in R32]
     for w in bracket:
         reached[w.name].add("r16")
-    # R16 -> QF -> SF -> Final, pairing neighbours each round.
-    for stage in ("qf", "sf", "final"):
+    for stage, played in (("qf", 4), ("sf", 5), ("final", 6)):
         nxt = []
         for i in range(0, len(bracket), 2):
-            w = sim_knockout(bracket[i], bracket[i + 1], P, rng)
+            w = sim_knockout(bracket[i], bracket[i + 1], P, rng, played)
             reached[w.name].add(stage)
             nxt.append(w)
         bracket = nxt
-    champ = sim_knockout(bracket[0], bracket[1], P, rng) if len(bracket) == 2 else bracket[0]
+    champ = sim_knockout(bracket[0], bracket[1], P, rng, 7) if len(bracket) == 2 else bracket[0]
     reached[champ.name].add("champion")
     return winners, runners, reached, champ.name
 
@@ -135,17 +135,17 @@ def run_from_r32(teams, P, field=ACTUAL_R32):
     pairs = [(teams[a], teams[b]) for a, b in field]
     tally = {t.name: defaultdict(int) for p in pairs for t in p}
     for _ in range(n):
-        bracket = [sim_knockout(a, b, P, rng) for a, b in pairs]
+        bracket = [sim_knockout(a, b, P, rng, 3) for a, b in pairs]
         for w in bracket:
             tally[w.name]["r16"] += 1
-        for stage in ("qf", "sf", "final"):
+        for stage, played in (("qf", 4), ("sf", 5), ("final", 6)):
             nxt = []
             for i in range(0, len(bracket), 2):
-                w = sim_knockout(bracket[i], bracket[i + 1], P, rng)
+                w = sim_knockout(bracket[i], bracket[i + 1], P, rng, played)
                 tally[w.name][stage] += 1
                 nxt.append(w)
             bracket = nxt
-        tally[sim_knockout(bracket[0], bracket[1], P, rng).name]["champion"] += 1
+        tally[sim_knockout(bracket[0], bracket[1], P, rng, 7).name]["champion"] += 1
     return {nm: {s: tally[nm][s] / n for s in stages} for nm in tally}
 
 

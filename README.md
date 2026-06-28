@@ -57,6 +57,25 @@ All live in [`principles.py`](principles.py), each documented inline:
 make it bite. Form is `0` for everyone by default, so that knob is inert until
 you supply opinions.
 
+## Fatigue (age + squad depth)
+
+Teams tire as the tournament drags on. Each knockout round adds an Elo penalty
+that is **amplified by an old squad** and **softened by a deep one**:
+
+```
+penalty = fatigue_per_match_elo × matches_played × age_mult × depth_mult
+age_mult   = 1 + fatigue_age_sensitivity × (avg_age − 27.5)
+depth_mult = 1 − fatigue_depth_relief   × (depth   − 3)
+```
+
+Each team carries its real **average age** (RotoWire, all 48 squads) and an
+editable 1–5 **depth** rating in `data/teams.csv`. The penalty hits both sides,
+so it cancels between similar squads and only swings a match when an old/thin
+team meets a young/deep one late on — the group stage is unaffected. Turning it
+on flips the pre-tournament favourite: young, deep Spain (26.2) edges old
+Argentina (28.6), 13.5% to 13.3%. Set `fatigue_per_match_elo = 0` to disable, or
+sweep it: `python3 sensitivity.py fatigue_per_match_elo 0 7 15`.
+
 ## Fine-tuning on actual results
 
 Once the group stage is played, `calibrate.py` retrofits the model to it. Holding

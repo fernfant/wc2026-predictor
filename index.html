@@ -110,6 +110,17 @@
     <div class="xg" id="xg"></div>
     <div class="scores" id="scores"></div>
     <div class="knob">
+      <label>Tournament stage <b><span id="stageName">group stage</span></b></label>
+      <select id="stage" style="width:100%;font-family:var(--body);font-size:14px;padding:9px 11px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);color:var(--ink)">
+        <option value="0">Group stage — fresh legs</option>
+        <option value="4">Round of 16 — 4 games in</option>
+        <option value="5">Quarter-final — 5 games in</option>
+        <option value="6">Semi-final — 6 games in</option>
+        <option value="7">Final — 7 games in</option>
+      </select>
+      <p class="hint" id="fatinfo"></p>
+    </div>
+    <div class="knob">
       <label>Host home advantage <b><span id="haVal">80</span> Elo</b></label>
       <input type="range" id="ha" min="0" max="180" value="80" step="10">
       <p class="hint">Boost applied to the three hosts (🇺🇸🇨🇦🇲🇽). If one is playing, watch their bar grow.</p>
@@ -141,8 +152,27 @@
   <div class="callout">Why hybrid? <strong>Elo</strong> is great at ranking strength but says nothing about scorelines. <strong>Poisson</strong> turns strength into goals — which you need for group standings (GD, GF) and for the drama of a 2–1. Together they give both odds and scores.</div>
 </section>
 
+<section id="fatigue">
+  <h2>3 · Fatigue: age and squad depth</h2>
+  <p class="sub">old legs tire, deep benches don't — and it compounds each round</p>
+  <p>A pure rating treats a team as equally fresh in the final as in its opener. Real squads don't work that way. By the semi-finals a side has played six high-intensity games in three weeks — and who copes depends on <strong>two things about the individual players</strong>: how <em>old</em> they are, and how much quality sits on the <em>bench</em> to rotate in.</p>
+  <p>So each squad carries two numbers (in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/data/teams.csv" target="_blank" rel="noopener">data/teams.csv</a>): its real <strong>average age</strong> (a summary of every player called up) and a <strong>depth</strong> rating from 1 (one thin XI) to 5 (two strong XIs). Fatigue is an Elo penalty that grows every round, amplified by age and softened by depth:</p>
+  <div class="formula">penalty = fatigue_per_match × matches_played × age_mult × depth_mult<br>age_mult&nbsp;&nbsp;= 1 + 0.10 × (avg_age − 27.5)   <span style="color:var(--ink-3)"># older → bigger</span><br>depth_mult = 1 − 0.15 × (depth − 3)      <span style="color:var(--ink-3)"># deeper → smaller</span></div>
+  <p>Crucially the penalty is applied to <em>both</em> teams, so between two similar squads it <strong>cancels</strong>. It only swings a match when an old, thin team meets a young, deep one — and only late, once <code>matches_played</code> is large. The group stage is unaffected.</p>
+  <table>
+    <tr><th>squad</th><th>avg age</th><th>depth</th><th>fatigue role</th></tr>
+    <tr><td>🇪🇸 Spain</td><td>26.2</td><td>5</td><td class="k">young + deep → ages best</td></tr>
+    <tr><td>🇫🇷 France</td><td>26.6</td><td>5</td><td class="k">young + deep</td></tr>
+    <tr><td>🇦🇷 Argentina</td><td>28.6</td><td>4</td><td>old but rotatable</td></tr>
+    <tr><td>🇨🇴 Colombia</td><td>29.6</td><td>3</td><td>oldest contender → fades</td></tr>
+    <tr><td>🇧🇷 Brazil</td><td>28.7</td><td>5</td><td>old, but huge depth offsets</td></tr>
+  </table>
+  <div class="callout">Turning fatigue on flips the favourite: <strong>Spain (26.2, depth 5) edges past Argentina (28.6) for the pre-tournament #1</strong>, 13.5% to 13.3% — the title-race chart below already includes it. Use the <strong>tournament-stage</strong> selector in the live demo above to watch an old/thin side bleed Elo as the rounds pile up.</div>
+  <p><span class="pill">data</span> Average ages are real (<a href="https://www.rotowire.com/soccer/article/2026-fifa-world-cup-squad-ages-youngest-oldest-teams-ranked-116813" target="_blank" rel="noopener">RotoWire</a>, all 48 squads); depth is an editable 1–5 estimate of bench strength. Both live in the CSV — change them and re-run.</p>
+</section>
+
 <section id="principles">
-  <h2>3 · The principles you can tune</h2>
+  <h2>4 · The principles you can tune</h2>
   <p class="sub">principles.py — every belief about football lives here</p>
   <p>Nothing in the model is hard-coded except these. Change one, re-run, and the whole forecast shifts. That's the point — it's a sensitivity instrument, not a black box.</p>
   <table>
@@ -150,6 +180,9 @@
     <tr><td class="k">home_advantage_elo</td><td>host boost (USA/Canada/Mexico)</td><td>80</td></tr>
     <tr><td class="k">concacaf_region_elo</td><td>smaller boost for other CONCACAF teams</td><td>15</td></tr>
     <tr><td class="k">form_weight</td><td>multiplier on each team's form column</td><td>1.0</td></tr>
+    <tr><td class="k">fatigue_per_match_elo</td><td>fatigue Elo lost per round (0 = off)</td><td>7</td></tr>
+    <tr><td class="k">fatigue_age_sensitivity</td><td>extra fatigue per year of age</td><td>0.10</td></tr>
+    <tr><td class="k">fatigue_depth_relief</td><td>fatigue cut per depth point</td><td>0.15</td></tr>
     <tr><td class="k">goal_elo_beta</td><td>predictability vs upsets</td><td>0.45</td></tr>
     <tr><td class="k">elo_scale</td><td>parity vs amplified favourites</td><td>400</td></tr>
     <tr><td class="k">avg_goals_per_team</td><td>overall scoring environment</td><td>1.30</td></tr>
@@ -158,7 +191,7 @@
 </section>
 
 <section id="tournament">
-  <h2>4 · Playing the whole tournament</h2>
+  <h2>5 · Playing the whole tournament</h2>
   <p class="sub">12 groups → best thirds → knockout → champion</p>
   <p>One simulation of the cup:</p>
   <ol>
@@ -172,7 +205,7 @@
 </section>
 
 <section id="sensitivity">
-  <h2>5 · Sensitivity: the payoff</h2>
+  <h2>6 · Sensitivity: the payoff</h2>
   <p class="sub">sensitivity.py — sweep a knob, watch the odds move</p>
   <p>This is what the principles are <em>for</em>. Take home advantage from 0 to 160 Elo and the hosts swing hard while everyone else barely moves — exactly what you'd expect, and a sanity check that the model behaves:</p>
   <table>
@@ -187,7 +220,7 @@
 </section>
 
 <section id="retrofit">
-  <h2>6 · Fine-tuning on the real group stage</h2>
+  <h2>7 · Fine-tuning on the real group stage</h2>
   <p class="sub">calibrate.py — fit the principles to what actually happened</p>
   <p>The group stage is over: 72 matches, 215 goals, <strong>2.99 per game</strong>. That's a fresh batch of evidence — so we can <em>retrofit</em> the model. Holding the pre-tournament Elo ratings fixed, we search for the principle values that best reproduce every team's actual goals-for, goals-against and points across its three games (minimising squared error).</p>
   <p>The real group stage was <strong>more lopsided</strong> than the defaults expected — France 10–2, Germany &amp; Netherlands 10–4, Argentina 8–1, Mexico 6–0. So the fit pushes goal-sensitivity up and widens the host edge:</p>
@@ -208,7 +241,7 @@
 </section>
 
 <section id="run">
-  <h2>7 · Run it yourself</h2>
+  <h2>8 · Run it yourself</h2>
   <p class="sub">pure Python stdlib · no dependencies · ~2.5s for 20k sims</p>
   <div class="formula">git clone https://github.com/fernfant/wc2026-predictor<br>cd wc2026-predictor<br><br>python3 predict.py              <span style="color:var(--ink-3)"># pre-tournament title race</span><br>python3 predict.py --matches    <span style="color:var(--ink-3)"># every group match's odds</span><br>python3 predict.py --full       <span style="color:var(--ink-3)"># stage-by-stage, all 48</span><br><br>python3 calibrate.py --write    <span style="color:var(--ink-3)"># fit knobs to actual group results</span><br>python3 predict.py --actual --calibrated  <span style="color:var(--ink-3)"># retrofit forecast from real R32</span><br><br>python3 sensitivity.py home_advantage_elo 0 80 160</div>
   <p>Edit team ratings or the <code>form</code> column in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/data/teams.csv" target="_blank" rel="noopener">data/teams.csv</a>, tune the knobs in <a href="https://github.com/fernfant/wc2026-predictor/blob/main/principles.py" target="_blank" rel="noopener">principles.py</a>, and the forecast follows.</p>
@@ -225,25 +258,28 @@
 </div>
 
 <script>
+// [name, confed, elo, host, flag, avg_age, depth]
 const TEAMS = [
-  ["Argentina","CONMEBOL",2144,0,"🇦🇷"],["Spain","UEFA",2134,0,"🇪🇸"],["France","UEFA",2090,0,"🇫🇷"],
-  ["England","UEFA",2028,0,"🏴"],["Brazil","CONMEBOL",2009,0,"🇧🇷"],["Colombia","CONMEBOL",2006,0,"🇨🇴"],
-  ["Portugal","UEFA",1988,0,"🇵🇹"],["Netherlands","UEFA",1972,0,"🇳🇱"],["Germany","UEFA",1954,0,"🇩🇪"],
-  ["Norway","UEFA",1951,0,"🇳🇴"],["Japan","AFC",1925,0,"🇯🇵"],["Switzerland","UEFA",1914,0,"🇨🇭"],
-  ["Mexico","CONCACAF",1912,1,"🇲🇽"],["Croatia","UEFA",1896,0,"🇭🇷"],["Morocco","CAF",1877,0,"🇲🇦"],
-  ["Belgium","UEFA",1869,0,"🇧🇪"],["Ecuador","CONMEBOL",1864,0,"🇪🇨"],["Uruguay","CONMEBOL",1851,0,"🇺🇾"],["Austria","UEFA",1841,0,"🇦🇹"],
-  ["United States","CONCACAF",1820,1,"🇺🇸"],["Senegal","CAF",1817,0,"🇸🇳"],["Paraguay","CONMEBOL",1816,0,"🇵🇾"],
-  ["Turkey","UEFA",1813,0,"🇹🇷"],["Australia","AFC",1799,0,"🇦🇺"],["Algeria","CAF",1780,0,"🇩🇿"],
-  ["Iran","AFC",1766,0,"🇮🇷"],["Canada","CONCACAF",1748,1,"🇨🇦"],["Scotland","UEFA",1745,0,"🏴"],
-  ["Egypt","CAF",1740,0,"🇪🇬"],["Ivory Coast","CAF",1728,0,"🇨🇮"],["Sweden","UEFA",1727,0,"🇸🇪"],
-  ["South Korea","AFC",1723,0,"🇰🇷"],["Czechia","UEFA",1680,0,"🇨🇿"],["Uzbekistan","AFC",1677,0,"🇺🇿"],
-  ["Panama","CONCACAF",1668,0,"🇵🇦"],["DR Congo","CAF",1666,0,"🇨🇩"],["Jordan","AFC",1632,0,"🇯🇴"],
-  ["Cape Verde","CAF",1625,0,"🇨🇻"],["Bosnia and Herzegovina","UEFA",1622,0,"🇧🇦"],["Saudi Arabia","AFC",1593,0,"🇸🇦"],
-  ["Iraq","AFC",1586,0,"🇮🇶"],["Ghana","CAF",1584,0,"🇬🇭"],["South Africa","CAF",1575,0,"🇿🇦"],
-  ["Tunisia","CAF",1570,0,"🇹🇳"],["New Zealand","OFC",1549,0,"🇳🇿"],["Haiti","CONCACAF",1517,0,"🇭🇹"],
-  ["Curacao","CONCACAF",1453,0,"🇨🇼"],["Qatar","AFC",1411,0,"🇶🇦"]
+  ["Argentina","CONMEBOL",2144,0,"🇦🇷",28.62,4],["Spain","UEFA",2134,0,"🇪🇸",26.19,5],["France","UEFA",2090,0,"🇫🇷",26.58,5],
+  ["England","UEFA",2028,0,"🏴",26.62,5],["Brazil","CONMEBOL",2009,0,"🇧🇷",28.65,5],["Colombia","CONMEBOL",2006,0,"🇨🇴",29.58,3],
+  ["Portugal","UEFA",1988,0,"🇵🇹",27.54,4],["Netherlands","UEFA",1972,0,"🇳🇱",27.27,4],["Germany","UEFA",1954,0,"🇩🇪",27.54,4],
+  ["Norway","UEFA",1951,0,"🇳🇴",26.35,2],["Japan","AFC",1925,0,"🇯🇵",27.19,3],["Switzerland","UEFA",1914,0,"🇨🇭",27.81,3],
+  ["Mexico","CONCACAF",1912,1,"🇲🇽",27.50,3],["Croatia","UEFA",1896,0,"🇭🇷",27.88,3],["Morocco","CAF",1877,0,"🇲🇦",25.92,4],
+  ["Belgium","UEFA",1869,0,"🇧🇪",27.12,4],["Ecuador","CONMEBOL",1864,0,"🇪🇨",25.58,3],["Uruguay","CONMEBOL",1851,0,"🇺🇾",28.19,3],["Austria","UEFA",1841,0,"🇦🇹",28.12,3],
+  ["United States","CONCACAF",1820,1,"🇺🇸",26.42,3],["Senegal","CAF",1817,0,"🇸🇳",26.62,4],["Paraguay","CONMEBOL",1816,0,"🇵🇾",28.54,2],
+  ["Turkey","UEFA",1813,0,"🇹🇷",27.23,3],["Australia","AFC",1799,0,"🇦🇺",26.88,2],["Algeria","CAF",1780,0,"🇩🇿",26.46,3],
+  ["Iran","AFC",1766,0,"🇮🇷",29.81,2],["Canada","CONCACAF",1748,1,"🇨🇦",26.42,3],["Scotland","UEFA",1745,0,"🏴",28.73,2],
+  ["Egypt","CAF",1740,0,"🇪🇬",28.69,2],["Ivory Coast","CAF",1728,0,"🇨🇮",25.35,3],["Sweden","UEFA",1727,0,"🇸🇪",27.00,2],
+  ["South Korea","AFC",1723,0,"🇰🇷",27.46,2],["Czechia","UEFA",1680,0,"🇨🇿",27.23,2],["Uzbekistan","AFC",1677,0,"🇺🇿",27.96,2],
+  ["Panama","CONCACAF",1668,0,"🇵🇦",30.00,2],["DR Congo","CAF",1666,0,"🇨🇩",28.50,2],["Jordan","AFC",1632,0,"🇯🇴",28.08,2],
+  ["Cape Verde","CAF",1625,0,"🇨🇻",29.23,2],["Bosnia and Herzegovina","UEFA",1622,0,"🇧🇦",25.92,2],["Saudi Arabia","AFC",1593,0,"🇸🇦",27.96,2],
+  ["Iraq","AFC",1586,0,"🇮🇶",26.65,2],["Ghana","CAF",1584,0,"🇬🇭",26.42,3],["South Africa","CAF",1575,0,"🇿🇦",26.35,2],
+  ["Tunisia","CAF",1570,0,"🇹🇳",26.15,2],["New Zealand","OFC",1549,0,"🇳🇿",27.62,1],["Haiti","CONCACAF",1517,0,"🇭🇹",27.08,1],
+  ["Curacao","CONCACAF",1453,0,"🇨🇼",27.54,1],["Qatar","AFC",1411,0,"🇶🇦",28.92,2]
 ];
-const P = {scale:400, mu:1.30, beta:0.45, homeAdv:80, region:15, formW:1.0};
+const P = {scale:400, mu:1.30, beta:0.45, homeAdv:80, region:15, formW:1.0,
+           fatigueRate:7, fAgeBase:27.5, fAgeSens:0.10, fDepthBase:3.0, fDepthRelief:0.15};
+let PLAYED = 0; // matches each side has played entering the selected stage
 
 function eff(t){
   let e = t[2];
@@ -251,14 +287,21 @@ function eff(t){
   else if (t[1]==="CONCACAF") e += P.region;
   return e;
 }
-function lambdas(a,b){
-  const d = (eff(a)-eff(b))/P.scale;
+function fatigueAdj(t, played){
+  if(!P.fatigueRate || !played) return 0;
+  const am=Math.max(0, 1 + P.fAgeSens*(t[5]-P.fAgeBase));
+  const dm=Math.max(0, 1 - P.fDepthRelief*(t[6]-P.fDepthBase));
+  return -P.fatigueRate*played*am*dm;
+}
+function lambdas(a,b,adjA=0,adjB=0){
+  const d = (eff(a)+adjA-eff(b)-adjB)/P.scale;
   return [P.mu*Math.exp(P.beta*d), P.mu*Math.exp(-P.beta*d)];
 }
 function pois(lam,k){ return Math.exp(-lam)*Math.pow(lam,k)/factorial(k); }
 const _f=[1]; function factorial(n){ while(_f.length<=n) _f.push(_f[_f.length-1]*_f.length); return _f[n]; }
 function probs(a,b){
-  const [la,lb]=lambdas(a,b); let w=0,dr=0,l=0; const cells=[];
+  const aa=fatigueAdj(a,PLAYED), ab=fatigueAdj(b,PLAYED);
+  const [la,lb]=lambdas(a,b,aa,ab); let w=0,dr=0,l=0; const cells=[];
   for(let i=0;i<10;i++)for(let j=0;j<10;j++){
     const p=pois(la,i)*pois(lb,j);
     if(i>j)w+=p; else if(j>i)l+=p; else dr+=p;
@@ -291,17 +334,28 @@ function render(){
   document.getElementById('xg').innerHTML=`expected goals &nbsp; <b>${r.la.toFixed(2)}</b> – <b>${r.lb.toFixed(2)}</b>`;
   document.getElementById('scores').innerHTML=r.top.map(c=>
     `<span class="chip">${c[0]}–${c[1]} · ${pc(c[2])}%</span>`).join('');
+  const fi=document.getElementById('fatinfo');
+  const tag=t=>`${t[4]} age ${t[5].toFixed(1)} · depth ${t[6]}`;
+  if(PLAYED){
+    const fa=fatigueAdj(a,PLAYED), fb=fatigueAdj(b,PLAYED);
+    fi.innerHTML=`${tag(a)} → <b>${fa.toFixed(0)}</b> Elo &nbsp;·&nbsp; ${tag(b)} → <b>${fb.toFixed(0)}</b> Elo. `+
+      `Older/thinner squads lose more — the gap is what moves the odds.`;
+  } else {
+    fi.innerHTML=`${tag(a)} &nbsp;·&nbsp; ${tag(b)}. Fresh legs — no fatigue yet. Pick a later stage to see age &amp; depth bite.`;
+  }
 }
 [A,B].forEach(s=>s.addEventListener('change',render));
 const ha=document.getElementById('ha'), beta=document.getElementById('beta');
+const stage=document.getElementById('stage'), stageNames={0:"group stage",4:"round of 16",5:"quarter-final",6:"semi-final",7:"final"};
+stage.addEventListener('change',()=>{PLAYED=+stage.value;document.getElementById('stageName').textContent=stageNames[PLAYED];render();});
 ha.addEventListener('input',()=>{P.homeAdv=+ha.value;document.getElementById('haVal').textContent=ha.value;render();});
 beta.addEventListener('input',()=>{P.beta=+beta.value;document.getElementById('betaVal').textContent=(+beta.value).toFixed(2);render();});
 render();
 
-// baseline title odds (from python, 20k sims, defaults)
-const TITLE=[["Argentina",13.2,0],["Spain",13.0,0],["France",9.6,0],["England",6.0,0],["Brazil",5.7,0],
-["Mexico",5.1,1],["Colombia",5.0,0],["Portugal",4.5,0],["Netherlands",3.9,0],["Germany",3.9,0],
-["Norway",3.2,0],["Japan",2.8,0],["Switzerland",2.8,0],["United States",2.4,1],["Croatia",2.0,0]];
+// baseline title odds (from python, 20k sims, defaults incl. fatigue)
+const TITLE=[["Spain",13.5,0],["Argentina",13.3,0],["France",10.6,0],["England",6.5,0],["Brazil",5.8,0],
+["Mexico",4.7,1],["Colombia",4.6,0],["Portugal",4.3,0],["Germany",4.0,0],["Netherlands",4.0,0],
+["Norway",3.1,0],["Japan",2.9,0],["Switzerland",2.6,0],["United States",2.2,1],["Croatia",2.0,0]];
 const flag=n=>{const t=TEAMS.find(x=>x[0]===n);return t?t[4]:'';};
 function drawBars(el,data,max){
   el.innerHTML=data.map(t=>{
@@ -311,17 +365,17 @@ function drawBars(el,data,max){
       `<span class="val">${t[1].toFixed(1)}%</span></div>`;
   }).join('');
 }
-drawBars(document.getElementById('titleBars'),TITLE,13.2);
+drawBars(document.getElementById('titleBars'),TITLE,13.5);
 
-// retrofit: actual R32 field + params calibrated to the group stage (20k sims)
-const RETRO=[["Argentina",25.3,0],["Spain",18.2,0],["France",13.7,0],["Colombia",6.6,0],
-["England",6.5,0],["Mexico",5.4,1],["Brazil",4.5,0],["Germany",2.9,0],["Netherlands",2.9,0],
-["Portugal",2.7,0],["United States",2.6,1],["Norway",2.2,0],["Japan",1.1,0],["Canada",1.1,1],["Switzerland",1.1,0]];
+// retrofit: actual R32 field + params calibrated to the group stage + fatigue (20k sims)
+const RETRO=[["Argentina",24.1,0],["Spain",19.2,0],["France",14.7,0],["England",7.1,0],
+["Colombia",6.2,0],["Mexico",4.9,1],["Brazil",4.7,0],["Germany",3.1,0],["Netherlands",3.0,0],
+["United States",2.6,1],["Portugal",2.6,0],["Norway",2.0,0],["Japan",1.1,0],["Canada",1.0,1],["Switzerland",1.0,0]];
 const retroEl=document.getElementById('retroBars');
 let showRetro=true;
 function paint(){
-  if(showRetro){ drawBars(retroEl,RETRO,25.3); document.getElementById('tlabel').textContent="retrofit (actual R32 + calibrated)"; }
-  else { drawBars(retroEl,TITLE,13.2); document.getElementById('tlabel').textContent="pre-tournament (original model)"; }
+  if(showRetro){ drawBars(retroEl,RETRO,24.1); document.getElementById('tlabel').textContent="retrofit (actual R32 + calibrated)"; }
+  else { drawBars(retroEl,TITLE,13.5); document.getElementById('tlabel').textContent="pre-tournament (original model)"; }
 }
 document.getElementById('toggle').addEventListener('click',()=>{showRetro=!showRetro;paint();});
 paint();

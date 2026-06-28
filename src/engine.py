@@ -4,13 +4,15 @@ import random
 
 
 class Team:
-    def __init__(self, name, group, confed, elo, form, host):
+    def __init__(self, name, group, confed, elo, form, host, avg_age=27.5, depth=3.0):
         self.name = name
         self.group = group
         self.confed = confed
         self.elo = float(elo)
         self.form = float(form)
         self.host = bool(int(host))
+        self.avg_age = float(avg_age)
+        self.depth = float(depth)
 
 
 def effective_elo(t, P):
@@ -24,9 +26,19 @@ def effective_elo(t, P):
     return e
 
 
-def expected_goals(a, b, P):
-    """Log-linear Poisson means from the effective-Elo gap."""
-    diff = (effective_elo(a, P) - effective_elo(b, P)) / P["elo_scale"]
+def fatigue_adj(t, played, P):
+    """Negative Elo adjustment from accumulated fatigue (age- and depth-scaled)."""
+    rate = P.get("fatigue_per_match_elo", 0.0)
+    if not rate or not played:
+        return 0.0
+    age_mult = max(0.0, 1 + P["fatigue_age_sensitivity"] * (t.avg_age - P["fatigue_age_baseline"]))
+    depth_mult = max(0.0, 1 - P["fatigue_depth_relief"] * (t.depth - P["fatigue_depth_baseline"]))
+    return -rate * played * age_mult * depth_mult
+
+
+def expected_goals(a, b, P, adj_a=0.0, adj_b=0.0):
+    """Log-linear Poisson means from the (adjusted) effective-Elo gap."""
+    diff = (effective_elo(a, P) + adj_a - effective_elo(b, P) - adj_b) / P["elo_scale"]
     mu = P["avg_goals_per_team"]
     la = mu * math.exp(P["goal_elo_beta"] * diff)
     lb = mu * math.exp(-P["goal_elo_beta"] * diff)
@@ -43,32 +55,33 @@ def _poisson(lam, rng):
             return k - 1
 
 
-def sim_score(a, b, P, rng):
-    la, lb = expected_goals(a, b, P)
+def sim_score(a, b, P, rng, adj_a=0.0, adj_b=0.0):
+    la, lb = expected_goals(a, b, P, adj_a, adj_b)
     return _poisson(la, rng), _poisson(lb, rng)
 
 
-def win_expectancy(a, b, P):
+def win_expectancy(a, b, P, adj_a=0.0, adj_b=0.0):
     """Elo win-expectancy of a over b (used for shootouts)."""
-    diff = effective_elo(a, P) - effective_elo(b, P)
+    diff = effective_elo(a, P) + adj_a - effective_elo(b, P) - adj_b
     return 1.0 / (1.0 + 10 ** (-diff / P["elo_scale"]))
 
 
-def sim_knockout(a, b, P, rng):
-    """Return the winning team; level scores go to a skill-weighted shootout."""
-    ga, gb = sim_score(a, b, P, rng)
+def sim_knockout(a, b, P, rng, played=0):
+    """Return the winner; both sides carry `played`-match fatigue. Level -> shootout."""
+    aa, ab = fatigue_adj(a, played, P), fatigue_adj(b, played, P)
+    ga, gb = sim_score(a, b, P, rng, aa, ab)
     if ga > gb:
         return a
     if gb > ga:
         return b
-    we = win_expectancy(a, b, P)
+    we = win_expectancy(a, b, P, aa, ab)
     p = 0.5 + (we - 0.5) * P["penalty_skill"]
     return a if rng.random() < p else b
 
 
-def match_probs(a, b, P, gmax=12):
+def match_probs(a, b, P, gmax=12, adj_a=0.0, adj_b=0.0):
     """Analytic W/D/L + expected goals for a fixture (no sampling)."""
-    la, lb = expected_goals(a, b, P)
+    la, lb = expected_goals(a, b, P, adj_a, adj_b)
     def pmf(lam, k):
         return math.exp(-lam) * lam ** k / math.factorial(k)
     pa = pb = pd = 0.0
